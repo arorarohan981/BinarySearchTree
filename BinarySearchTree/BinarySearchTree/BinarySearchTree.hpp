@@ -56,6 +56,10 @@ private:
     /*Returns True if the Node is a Leaf Node or else returns false */
     bool isLeafNode(Node *ptr);
     
+    /*Returns the Number of Nodes in an Internal Node */
+    size_t nodeCount(Node *ptr);
+ 
+    
 public:
     
     virtual ~BinarySearchTree();
@@ -158,8 +162,6 @@ bool BinarySearchTree<T>::add(T userData){
         }
     }
     return false;
-    
-    
 }
 
 
@@ -248,31 +250,114 @@ bool BinarySearchTree<T>::remove(T userData){
     }
     std::stack<Node*> stackOfAddress{};
     Node *iterptr=root.get();
-    while(true){
-        if(isLeafNode(iterptr)){
-            if(userData==iterptr->data){
-                iterptr=stackOfAddress.top();
-                if(iterptr->data<userData){
-                    iterptr->right.reset();}
-                else{
-                    iterptr->left.reset();
-                }
+    //If the data to be deleted is the root Node
+    if(iterptr->data==userData){
+        if(iterptr->right==nullptr){
+            root=std::move(iterptr->left);
+            return true;
+        }else{
+            if(iterptr->left==nullptr){
+                root=std::move(iterptr->right);
                 return true;
             }
-            
+            iterptr=iterptr->right.get();
+            while(iterptr->left!=nullptr){
+                iterptr=iterptr->left.get();
+            }
+            iterptr->left=std::move(root->left);
+            root=std::move(root->right);
+            return true;
         }
+    }
+    
+    //Iterating the Binary Search Tree to get the required Element and also pushing the elements parent in the Stack.
+    while(iterptr){
+        if(iterptr->data==userData){
+            break;
+        }
+        stackOfAddress.push(iterptr);
     if(iterptr->data<userData)
     {
-        stackOfAddress.push(iterptr);
+        
         iterptr=iterptr->right.get();
     }else{
-        stackOfAddress.push(iterptr);
+        
         iterptr=iterptr->left.get();
     }
+  }
+    
+    if(iterptr!=nullptr){
+    //If the node to be removed is the Leafnode.
+    if( isLeafNode(iterptr)){
+        if(userData==iterptr->data){
+            iterptr=stackOfAddress.top();
+            if(iterptr->data<userData){
+                iterptr->right.reset();}
+            else{
+                iterptr->left.reset();
+            }
+            return true;
         }
-           return true;
+        return false;
+    }else{
+        Node* parent;
+        /*Case when the Node to be removed is the internal node */
+        parent=stackOfAddress.top();
+        if(iterptr->data==userData){
+           
+            //if the node to be deleted doesnt have a right child
+            if(iterptr->right==nullptr){
+                
+                if(iterptr->left){
+                    parent->left=std::move(iterptr->left);
+                    return true;
+                }else{
+                    parent->right=std::move(iterptr->left);
+                    return true;
+                }
+            }else{
+                //If node to be deleted has a right child.
+                //then traverse to leftmost node of the Right child.
+                std::unique_ptr<Node> left_child = std::move(iterptr->left);
+                        iterptr->left.reset();
+                        Node* temp_ptr = iterptr->right.get();
+
+                        if (parent->left.get() == iterptr) {
+                            parent->left = std::move(iterptr->right);
+                        }
+                        else {
+                            parent->right = std::move(iterptr->right);
+                        }
+                                
+                        while (temp_ptr->left) {
+                            temp_ptr = temp_ptr->left.get();
+                        }
+                        temp_ptr->left = std::move(left_child);
+                        left_child.reset();
+
+                return true;
+                
+            }
+        }
+    }
+    }
+    
+    
+           return false;
 }
 
+
+template <typename T>
+size_t BinarySearchTree<T>::nodeCount(Node *ptr){
+    size_t counter{0};
+    if(ptr->left){
+        counter++;
+    }
+    if(ptr->right){
+        counter++;
+    }
+    return counter;
+}
 
 template <typename T>
 bool BinarySearchTree<T>::isLeafNode(Node* ptr){
